@@ -34,8 +34,7 @@ shorthand <- function(x) {
 
 batcov %>% group_by(host_species) %>% 
   summarize(betacov = max(betacov),
-            sarbecov = shorthand(sarbecov)) -> betacov
-
+            sarbecov = shorthand(sarbecov)) -> batcov
 
 # Create binomial names in the trait data
 
@@ -61,7 +60,7 @@ batdf %>% dummy_cols('ForStrat.Value') %>%
 
 varnums <- c(8:74)
 
-varkeep <- 7 + unname(which(c(colSums(is.na(batdf[,8:74]))/nrow(batdf)) < 0.9))
+varkeep <- 7 + unname(which(c(colSums(is.na(batdf[,8:74]))/nrow(batdf)) < 0.5))
 
 # Updated table
 
@@ -96,7 +95,35 @@ batdf %>%
 
 batdf %>% 
   as_tibble() %>%
-  filter(!(sarbecov == 1)) %>%
-  select(host_species, betacov, sarbecov, pred2) %>%
-  arrange(-pred2)
+  filter(!(betacov == 1)) %>%
+  select(host_species, pred2) %>%
+  arrange(-pred2) %>% View()
 
+# Get a 90% omission threshold
+
+batdf %>% 
+  as_tibble() %>%
+  select(host_species, betacov, pred2) %>%
+  data.frame() -> training
+
+library(PresenceAbsence)
+
+thresh <- optimal.thresholds(data.frame(training),
+                             threshold = 10001,
+                             opt.methods = 10,
+                             req.sens = 0.9,
+                             na.rm = TRUE)[1,2]
+
+# How many new bats are above the threshold?
+
+batdf %>% 
+  as_tibble() %>%
+  filter(!(betacov == 1)) %>%
+  select(host_species, pred2) %>%
+  arrange(-pred2) %>% 
+  filter(pred2 > thresh) -> not.df
+nrow(not.df)
+
+# How's the AUC look
+
+auc.roc.plot(data.frame(training))
