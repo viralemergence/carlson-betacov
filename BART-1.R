@@ -1,9 +1,13 @@
 
-setwd('C:/Users/cjcar/Desktop/BatCoV')
-library(embarcadero)
+setwd('~/Github/carlson-batcov')
+library(BART)
+library(fastDummies)
+library(tidyverse)
 
-batcov <- read_csv('BatCoV-assoc.csv')
-traits <- read_csv('Han-BatTraits.csv')
+set.seed(69)
+
+read_csv('BatCoV-assoc.csv') %>% filter(origin == 'Anthony') -> batcov
+read_csv('Han-BatTraits.csv') -> traits
 
 # Add outcome variables 
 
@@ -18,6 +22,21 @@ batcov$sarbecov[is.na(batcov$sarbecov) & (batcov$virus_genus == 'Betacoronavirus
 
 batcov %>% select(host_species, betacov, sarbecov) %>% unique -> batcov
 
+# An internal function to summarize known associations
+
+shorthand <- function(x) {
+  if(sum(x==1)>0) {1} else {
+  if(sum(x==-1)>0) {-1} else {
+    0
+  }
+  }
+}
+
+batcov %>% group_by(host_species) %>% 
+  summarize(betacov = max(betacov),
+            sarbecov = shorthand(sarbecov)) -> betacov
+
+
 # Create binomial names in the trait data
 
 traits %>% mutate(host_species = paste(MSW05_Genus, MSW05_Species)) %>% 
@@ -28,14 +47,11 @@ traits %>% mutate(host_species = paste(MSW05_Genus, MSW05_Species)) %>%
 right_join(batcov, traits) %>% 
   mutate(betacov = replace_na(betacov, 0),
          sarbecov = replace_na(sarbecov, 0)) %>%
-  mutate(betacov = na_if(betacov, -1),
-         sarbecov = na_if(sarbecov, -1)) -> batdf 
+  mutate(sarbecov = na_if(sarbecov, -1)) -> batdf 
 
 batdf <- data.frame(batdf)
 
 # Turn categorical variable into columns
-
-library(fastDummies)
 
 batdf %>% dummy_cols('ForStrat.Value') %>% 
   select(-ForStrat.Value) -> batdf
@@ -49,7 +65,6 @@ varkeep <- 7 + unname(which(c(colSums(is.na(batdf[,8:74]))/nrow(batdf)) < 0.9))
 
 # Updated table
 
-library(BART)
 
 model1 <- pbart(x.train = batdf[,varkeep],
                 y.train = batdf[,'betacov'],
@@ -65,3 +80,23 @@ model2 <- pbart(x.train = batdf[,varkeep],
 
 varimp.pbart(model1)
 varimp.pbart(model2)
+
+batdf$pred1 <- colMeans(pnorm(model1$yhat.train))
+batdf$pred2 <- colMeans(pnorm(model2$yhat.train))
+
+# A density plot in the style of Becker
+
+batdf %>% 
+  ggplot(aes(pred2, 
+             fill = factor(betacov), 
+             colour = factor(betacov))) + 
+  geom_density(alpha = 0.1)
+ 
+# Top rankings 
+
+batdf %>% 
+  as_tibble() %>%
+  filter(!(sarbecov == 1)) %>%
+  select(host_species, betacov, sarbecov, pred2) %>%
+  arrange(-pred2)
+
