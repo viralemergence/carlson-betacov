@@ -127,3 +127,15 @@ nrow(not.df)
 # How's the AUC look
 
 auc.roc.plot(data.frame(training))
+
+# File for Greg
+
+batdf %>% select(host_species,
+                 betacov,
+                 sarbecov,
+                 pred2) %>% mutate(pred.bin = (pred2 > thresh),
+                                   rank = rank(pred2)) %>%
+  mutate(rank = (max(rank) - rank + 1)) %>%
+  rename(pred = pred2) %>% as_tibble() -> bat.report
+
+write.csv(bat.report, 'batcov-bart.csv')
