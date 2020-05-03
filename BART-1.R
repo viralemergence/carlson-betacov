@@ -71,6 +71,12 @@ model1 <- pbart(x.train = batdf[,varkeep],
                 ntree = 200L,
                 ndpost = 10000L)
 
+model2 <- pbart(x.train = batdf[,varkeep],
+                y.train = batdf[,'betacov'],
+                sparse = TRUE,
+                ntree = 200L,
+                ndpost = 10000L)
+
 varimp.pbart(model1)
 varimp.pbart(model2)
 
