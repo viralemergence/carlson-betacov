@@ -4,10 +4,10 @@ library(BART)
 library(fastDummies)
 library(tidyverse)
 
-set.seed(69)
+set.seed(05082020)
 
-read_csv('BatCoV-assoc.csv') %>% filter(origin == 'Anthony') -> batcov
-read_csv('Han-BatTraits.csv') -> traits
+read_csv('~/GitHub/cleanbats_betacov/clean data/BatCoV-assoc_compatible.csv') %>% filter(origin == 'Anthony') -> batcov
+read_csv('~/GitHub/cleanbats_betacov/clean data/Han-BatTraits_compatible.csv') -> traits
 
 # Add outcome variables 
 
