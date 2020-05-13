@@ -1,5 +1,5 @@
 
-setwd('~/Github/carlson-batcov')
+setwd('~/Github/carlson-betacov')
 set.seed(05082020)
 
 library(BART)
@@ -52,35 +52,14 @@ varimp.pbart <- function(model, plot=TRUE) {
   
 }
 
-read_csv('~/GitHub/cleanbats_betacov/clean data/BatCoV-assoc_compatible.csv') %>% filter(origin == 'Anthony') -> batcov
-read_csv('~/GitHub/cleanbats_betacov/clean data/Han-BatTraits_compatible.csv') -> traits
+read_csv('~/GitHub/virionette/03_interaction_data/virionette.csv') %>% filter(host_order == 'Chiroptera') -> batcov
+read_csv('~/GitHub/virionette/04_predictors/Han-BatTraits.csv') -> traits
 
 # Add outcome variables 
 
-batcov %>% mutate(betacov = as.numeric(virus_genus == 'Betacoronavirus'),
-                  sarbecov = as.numeric(virus_subgenus == 'Sarbecovirus')) -> batcov
+batcov %>% mutate(betacov = as.numeric(virus_genus == 'Betacoronavirus')) -> batcov
 
-# Replace NA's for subgenus with 0 only if they're not betacoronaviruses
-# (Addresses large number of unclassified betacoronaviruses)
-
-batcov$sarbecov[is.na(batcov$sarbecov) & !(batcov$virus_genus == 'Betacoronavirus')] <- 0
-batcov$sarbecov[is.na(batcov$sarbecov) & (batcov$virus_genus == 'Betacoronavirus')] <- -1
-
-batcov %>% select(host_species, betacov, sarbecov) %>% unique -> batcov
-
-# An internal function to summarize known associations
-
-shorthand <- function(x) {
-  if(sum(x==1)>0) {1} else {
-  if(sum(x==-1)>0) {-1} else {
-    0
-  }
-  }
-}
-
-batcov %>% group_by(host_species) %>% 
-  summarize(betacov = max(betacov),
-            sarbecov = shorthand(sarbecov)) -> batcov
+batcov %>% select(host_species, betacov) %>% unique -> batcov
 
 # Create binomial names in the trait data
 
@@ -90,66 +69,93 @@ traits %>% mutate(host_species = paste(MSW05_Genus, MSW05_Species)) %>%
 # Add traits and associations
 
 right_join(batcov, traits) %>% 
-  mutate(betacov = replace_na(betacov, 0),
-         sarbecov = replace_na(sarbecov, 0)) %>%
-  mutate(sarbecov = na_if(sarbecov, -1)) -> batdf 
-
-batdf <- data.frame(batdf)
+  mutate(betacov = replace_na(betacov, 0)) -> batdf 
 
 # Turn categorical variable into columns
 
 batdf %>% dummy_cols('ForStrat.Value') %>% 
   select(-ForStrat.Value) -> batdf
 
+# Remove Sarah's drops 
+
+batdf %>% select(-BodyMass.Value) %>%
+  select(-X30.2_PET_Mean_mm) %>%
+  select(-X27.3_HuPopDen_5p_n.km2) %>%
+  select(-X27.1_HuPopDen_Min_n.km2) -> batdf
+
 # Full model fails because there are too many NA's somewhere
 # Drop any variable with > 50% NA's
 
-varnums <- c(8:74)
+varnums <- c(7:69)
 
-varkeep <- 7 + unname(which(c(colSums(is.na(batdf[,8:74]))/nrow(batdf)) < 0.5))
+varkeep <- 6 + unname(which(c(colSums(is.na(batdf[,7:69]))/nrow(batdf)) < 0.5))
 
-# Updated table
+batdf %>% data.frame -> batdf
 
+# Add citations
 
-model1 <- pbart(x.train = batdf[,varkeep],
-                y.train = batdf[,'betacov'],
-                sparse = FALSE,
-                ntree = 200L,
-                ndpost = 10000L)
+read_csv('~/GitHub/virionette/04_predictors/Citations.csv')[,-1] %>%
+  rename(host_species = name) -> cites
 
-model2 <- pbart(x.train = batdf[,varkeep],
-                y.train = batdf[,'betacov'],
-                sparse = TRUE,
-                ntree = 200L,
-                ndpost = 10000L)
+batdf <- left_join(batdf, cites)
 
-varimp.pbart(model1)
-varimp.pbart(model2)
+# Fill in missing citations
+#counter <- function(name) {as.numeric(as.character(easyPubMed::get_pubmed_ids(name)$Count))}
+#for(i in 1:nrow(batdf)){
+#  if(is.na(batdf$cites[i])){
+#    batdf$cites[i] <- counter(batdf$host_species[i])
+#  }
+#  print(i)
+#}
 
-batdf$pred1 <- colMeans(pnorm(model1$yhat.train))
-batdf$pred2 <- colMeans(pnorm(model2$yhat.train))
+varwcite <- c(varkeep, which(colnames(batdf)=='cites'))
+
+batdf.master <- batdf
+
+##########################################################################
+
+# FOUR MODELS
+# 1A - Baseline BART, no citations
+# 1B - Baseline BART, with citations
+# 2A - DART, no citations
+# 2B - DART, with citations
+
+##########################################################################
+
+batdf <- batdf.master
+
+model1a <- pbart(x.train = batdf[,varkeep],
+                 y.train = batdf[,'betacov'],
+                 sparse = FALSE,
+                 ntree = 200L,
+                 ndpost = 10000L)
+
+varimp.pbart(model1a)
+
+batdf$pred1a <- colMeans(pnorm(model1a$yhat.train))
 
 # A density plot in the style of Becker
 
 batdf %>% 
-  ggplot(aes(pred2, 
+  ggplot(aes(pred1a, 
              fill = factor(betacov), 
              colour = factor(betacov))) + 
-  geom_density(alpha = 0.1)
- 
+  geom_density(alpha = 0.1) + 
+  theme_classic()
+
 # Top rankings 
 
 batdf %>% 
   as_tibble() %>%
   filter(!(betacov == 1)) %>%
-  select(host_species, pred2) %>%
-  arrange(-pred2) %>% View()
+  select(host_species, pred1a) %>%
+  arrange(-pred1a) %>% View()
 
 # Get a 90% omission threshold
 
 batdf %>% 
   as_tibble() %>%
-  select(host_species, betacov, pred2) %>%
+  select(host_species, betacov, pred1a) %>%
   data.frame() -> training
 
 library(PresenceAbsence)
@@ -165,23 +171,227 @@ thresh <- optimal.thresholds(data.frame(training),
 batdf %>% 
   as_tibble() %>%
   filter(!(betacov == 1)) %>%
-  select(host_species, pred2) %>%
-  arrange(-pred2) %>% 
-  filter(pred2 > thresh) -> not.df
+  select(host_species, pred1a) %>%
+  arrange(-pred1a) %>% 
+  filter(pred1a > thresh) -> not.df
 nrow(not.df)
 
 # How's the AUC look
 
 auc.roc.plot(data.frame(training))
 
-# File for Greg
+# File export
 
 batdf %>% select(host_species,
                  betacov,
-                 sarbecov,
-                 pred2) %>% mutate(pred.bin = (pred2 > thresh),
-                                   rank = rank(pred2)) %>%
-  mutate(rank = (max(rank) - rank + 1)) %>%
-  rename(pred = pred2) %>% as_tibble() -> bat.report
+                 pred1a) %>% 
+  rename(pred = pred1a) %>% as_tibble() %>% 
+  write.csv('CarlsonBartUncorrected.csv')
 
-write.csv(bat.report, 'batcov-bart.csv')
+##########################################################################
+
+batdf <- batdf.master
+
+model1b <- pbart(x.train = batdf[,varwcite],
+                 y.train = batdf[,'betacov'],
+                 sparse = FALSE,
+                 ntree = 200L,
+                 ndpost = 10000L)
+
+varimp.pbart(model1b)
+
+batdf$cites <- mean(na.omit(batdf$cites))
+
+batdf$pred1b <- pnorm(colMeans(predict(model1b, batdf[,colnames(model1b$varcount)])$yhat.test))
+
+# A density plot in the style of Becker
+
+batdf %>% 
+  ggplot(aes(pred1b, 
+             fill = factor(betacov), 
+             colour = factor(betacov))) + 
+  geom_density(alpha = 0.1) + 
+  theme_classic()
+
+# Top rankings 
+
+batdf %>% 
+  as_tibble() %>%
+  filter(!(betacov == 1)) %>%
+  select(host_species, pred1b) %>%
+  arrange(-pred1b) %>% View()
+
+# Get a 90% omission threshold
+
+batdf %>% 
+  as_tibble() %>%
+  select(host_species, betacov, pred1b) %>%
+  data.frame() -> training
+
+library(PresenceAbsence)
+
+thresh <- optimal.thresholds(data.frame(training),
+                             threshold = 10001,
+                             opt.methods = 10,
+                             req.sens = 0.9,
+                             na.rm = TRUE)[1,2]
+
+# How many new bats are above the threshold?
+
+batdf %>% 
+  as_tibble() %>%
+  filter(!(betacov == 1)) %>%
+  select(host_species, pred1b) %>%
+  arrange(-pred1b) %>% 
+  filter(pred1b > thresh) -> not.df
+nrow(not.df)
+
+# How's the AUC look
+
+auc.roc.plot(data.frame(training))
+
+# File export
+
+batdf %>% select(host_species,
+                 betacov,
+                 pred1b) %>% 
+  rename(pred = pred1b) %>% as_tibble() %>% 
+  write.csv('CarlsonBartCitations.csv')
+
+##########################################################################
+
+batdf <- batdf.master
+
+model2a <- pbart(x.train = batdf[,varkeep],
+                y.train = batdf[,'betacov'],
+                sparse = TRUE,
+                ntree = 200L,
+                ndpost = 10000L)
+
+varimp.pbart(model2a)
+
+batdf$pred2a <- colMeans(pnorm(model2a$yhat.train))
+
+# A density plot in the style of Becker
+
+batdf %>% 
+  ggplot(aes(pred2a, 
+             fill = factor(betacov), 
+             colour = factor(betacov))) + 
+  geom_density(alpha = 0.1) + 
+  theme_classic()
+ 
+# Top rankings 
+
+batdf %>% 
+  as_tibble() %>%
+  filter(!(betacov == 1)) %>%
+  select(host_species, pred2a) %>%
+  arrange(-pred2a) %>% View()
+
+# Get a 90% omission threshold
+
+batdf %>% 
+  as_tibble() %>%
+  select(host_species, betacov, pred2a) %>%
+  data.frame() -> training
+
+library(PresenceAbsence)
+
+thresh <- optimal.thresholds(data.frame(training),
+                             threshold = 10001,
+                             opt.methods = 10,
+                             req.sens = 0.9,
+                             na.rm = TRUE)[1,2]
+
+# How many new bats are above the threshold?
+
+batdf %>% 
+  as_tibble() %>%
+  filter(!(betacov == 1)) %>%
+  select(host_species, pred2a) %>%
+  arrange(-pred2a) %>% 
+  filter(pred2a > thresh) -> not.df
+nrow(not.df)
+
+# How's the AUC look
+
+auc.roc.plot(data.frame(training))
+
+# File export
+
+batdf %>% select(host_species,
+                 betacov,
+                 pred2a) %>% 
+  rename(pred = pred2a) %>% as_tibble() %>% 
+  write.csv('CarlsonDartUncorrected.csv')
+
+##########################################################################
+
+batdf <- batdf.master
+
+model2b <- pbart(x.train = batdf[,varwcite],
+                 y.train = batdf[,'betacov'],
+                 sparse = TRUE,
+                 ntree = 200L,
+                 ndpost = 10000L)
+
+varimp.pbart(model2b)
+
+batdf$cites <- mean(na.omit(batdf$cites))
+
+batdf$pred2b <- pnorm(colMeans(predict(model2b, batdf[,colnames(model2b$varcount)])$yhat.test))
+
+# A density plot in the style of Becker
+
+batdf %>% 
+  ggplot(aes(pred2b, 
+             fill = factor(betacov), 
+             colour = factor(betacov))) + 
+  geom_density(alpha = 0.1) + 
+  theme_classic()
+
+# Top rankings 
+
+batdf %>% 
+  as_tibble() %>%
+  filter(!(betacov == 1)) %>%
+  select(host_species, pred2b) %>%
+  arrange(-pred2b) %>% View()
+
+# Get a 90% omission threshold
+
+batdf %>% 
+  as_tibble() %>%
+  select(host_species, betacov, pred2b) %>%
+  data.frame() -> training
+
+library(PresenceAbsence)
+
+thresh <- optimal.thresholds(data.frame(training),
+                             threshold = 10001,
+                             opt.methods = 10,
+                             req.sens = 0.9,
+                             na.rm = TRUE)[1,2]
+
+# How many new bats are above the threshold?
+
+batdf %>% 
+  as_tibble() %>%
+  filter(!(betacov == 1)) %>%
+  select(host_species, pred2b) %>%
+  arrange(-pred2b) %>% 
+  filter(pred2b > thresh) -> not.df
+nrow(not.df)
+
+# How's the AUC look
+
+auc.roc.plot(data.frame(training))
+
+# File export
+
+batdf %>% select(host_species,
+                 betacov,
+                 pred2b) %>% 
+  rename(pred = pred2b) %>% as_tibble() %>% 
+  write.csv('CarlsonDartCitations.csv')
