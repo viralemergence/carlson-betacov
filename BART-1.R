@@ -60,6 +60,7 @@ read_csv('~/GitHub/virionette/04_predictors/Han-BatTraits.csv') -> traits
 batcov %>% mutate(betacov = as.numeric(virus_genus == 'Betacoronavirus')) -> batcov
 
 batcov %>% select(host_species, betacov) %>% unique -> batcov
+batcov %>% group_by(host_species) %>% summarize(betacov = max(betacov)) -> batcov
 
 # Create binomial names in the trait data
 
@@ -112,6 +113,58 @@ varwcite <- c(varkeep, which(colnames(batdf)=='cites'))
 
 batdf.master <- batdf
 
+brtvar <- c('X5.1_AdultBodyMass_g',
+'X8.1_AdultForearmLen_mm',
+'X26.1_GR_Area_km2',
+'X26.2_GR_MaxLat_dd',
+'X26.3_GR_MinLat_dd',
+'X26.4_GR_MidRangeLat_dd',
+'X26.5_GR_MaxLong_dd',
+'X26.6_GR_MinLong_dd',
+'X26.7_GR_MidRangeLong_dd',
+'X27.2_HuPopDen_Mean_n.km2',
+'X27.4_HuPopDen_Change',
+'X28.1_Precip_Mean_mm',
+'X28.2_Temp_Mean_01degC',
+'X30.1_AET_Mean_mm',
+'Diet.Inv',
+'Diet.Fruit',
+'Diet.Nect',
+'Activity.Crepuscular',
+'ForStrat.Value_A',
+'ForStrat.Value_Ar',
+'ForStrat.Value_G',
+'ForStrat.Value_S')
+
+brtcite <- c(brtvar,'cites')
+
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+########################################
+
+#library(embarcadero)
+
+batdf <- batdf.master
+
+vs <- variable.step.pbart(batdf[,brtvar], 
+                          batdf[,'betacov'],
+                          n.trees = 10,
+                          iter = 100,
+                          quiet = FALSE)
+
 ##########################################################################
 
 # FOUR MODELS
@@ -124,7 +177,7 @@ batdf.master <- batdf
 
 batdf <- batdf.master
 
-model1a <- pbart(x.train = batdf[,varkeep],
+model1a <- pbart(x.train = batdf[,brtvar], #varkeep
                  y.train = batdf[,'betacov'],
                  sparse = FALSE,
                  ntree = 200L,
@@ -192,7 +245,7 @@ batdf %>% select(host_species,
 
 batdf <- batdf.master
 
-model1b <- pbart(x.train = batdf[,varwcite],
+model1b <- pbart(x.train = batdf[,brtcite], #varwcite
                  y.train = batdf[,'betacov'],
                  sparse = FALSE,
                  ntree = 200L,
@@ -262,7 +315,7 @@ batdf %>% select(host_species,
 
 batdf <- batdf.master
 
-model2a <- pbart(x.train = batdf[,varkeep],
+model2a <- pbart(x.train = batdf[,brtvar], #varkeep
                 y.train = batdf[,'betacov'],
                 sparse = TRUE,
                 ntree = 200L,
@@ -330,7 +383,7 @@ batdf %>% select(host_species,
 
 batdf <- batdf.master
 
-model2b <- pbart(x.train = batdf[,varwcite],
+model2b <- pbart(x.train = batdf[,brtcite], #varwcite
                  y.train = batdf[,'betacov'],
                  sparse = TRUE,
                  ntree = 200L,
@@ -395,3 +448,4 @@ batdf %>% select(host_species,
                  pred2b) %>% 
   rename(pred = pred2b) %>% as_tibble() %>% 
   write.csv('CarlsonDartCitations.csv')
+
