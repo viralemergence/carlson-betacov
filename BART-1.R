@@ -1,5 +1,8 @@
 
-setwd('~/Github/carlson-betacov')
+# Colin Code ####
+
+#setwd('~/Github/carlson-betacov')
+
 set.seed(05082020)
 
 library(BART)
@@ -52,14 +55,23 @@ varimp.pbart <- function(model, plot=TRUE) {
   
 }
 
-read_csv('~/GitHub/virionette/03_interaction_data/virionette.csv') %>% filter(host_order == 'Chiroptera') -> batcov
-read_csv('~/GitHub/virionette/04_predictors/Han-BatTraits.csv') -> traits
+read_csv(paste0(here::here(), 
+                '/GitHub/Repos/virionette/03_interaction_data/virionette.csv')) %>% 
+  filter(host_order == 'Chiroptera') -> 
+  
+  batcov
+
+read_csv(paste0(here::here(), '/GitHub/Repos/virionette/04_predictors/Han-BatTraits.csv')) -> 
+  
+  traits
 
 # Add outcome variables 
 
-batcov %>% mutate(betacov = as.numeric(virus_genus == 'Betacoronavirus')) -> batcov
+batcov %>% mutate(betacov = as.numeric(virus_genus == 'Betacoronavirus')) -> 
+  
+  batcov
 
-batcov %>% select(host_species, betacov) %>% unique -> batcov
+batcov %>% dplyr::select(host_species, betacov) %>% unique -> batcov
 batcov %>% group_by(host_species) %>% summarize(betacov = max(betacov)) -> batcov
 
 # Create binomial names in the trait data
@@ -75,14 +87,14 @@ right_join(batcov, traits) %>%
 # Turn categorical variable into columns
 
 batdf %>% dummy_cols('ForStrat.Value') %>% 
-  select(-ForStrat.Value) -> batdf
+  dplyr::select(-ForStrat.Value) -> batdf
 
 # Remove Sarah's drops 
 
-batdf %>% select(-BodyMass.Value) %>%
-  select(-X30.2_PET_Mean_mm) %>%
-  select(-X27.3_HuPopDen_5p_n.km2) %>%
-  select(-X27.1_HuPopDen_Min_n.km2) -> batdf
+batdf %>% dplyr::select(-BodyMass.Value) %>%
+  dplyr::select(-X30.2_PET_Mean_mm) %>%
+  dplyr::select(-X27.3_HuPopDen_5p_n.km2) %>%
+  dplyr::select(-X27.1_HuPopDen_Min_n.km2) -> batdf
 
 # Full model fails because there are too many NA's somewhere
 # Drop any variable with > 50% NA's
@@ -95,7 +107,7 @@ batdf %>% data.frame -> batdf
 
 # Add citations
 
-read_csv('~/GitHub/virionette/04_predictors/Citations.csv')[,-1] %>%
+read_csv(paste0(here::here(), '/GitHub/Repos/virionette/04_predictors/Citations.csv'))[,-1] %>%
   rename(host_species = name) -> cites
 
 batdf <- left_join(batdf, cites)
@@ -114,27 +126,27 @@ varwcite <- c(varkeep, which(colnames(batdf)=='cites'))
 batdf.master <- batdf
 
 brtvar <- c('X5.1_AdultBodyMass_g',
-'X8.1_AdultForearmLen_mm',
-'X26.1_GR_Area_km2',
-'X26.2_GR_MaxLat_dd',
-'X26.3_GR_MinLat_dd',
-'X26.4_GR_MidRangeLat_dd',
-'X26.5_GR_MaxLong_dd',
-'X26.6_GR_MinLong_dd',
-'X26.7_GR_MidRangeLong_dd',
-'X27.2_HuPopDen_Mean_n.km2',
-'X27.4_HuPopDen_Change',
-'X28.1_Precip_Mean_mm',
-'X28.2_Temp_Mean_01degC',
-'X30.1_AET_Mean_mm',
-'Diet.Inv',
-'Diet.Fruit',
-'Diet.Nect',
-'Activity.Crepuscular',
-'ForStrat.Value_A',
-'ForStrat.Value_Ar',
-'ForStrat.Value_G',
-'ForStrat.Value_S')
+            'X8.1_AdultForearmLen_mm',
+            'X26.1_GR_Area_km2',
+            'X26.2_GR_MaxLat_dd',
+            'X26.3_GR_MinLat_dd',
+            'X26.4_GR_MidRangeLat_dd',
+            'X26.5_GR_MaxLong_dd',
+            'X26.6_GR_MinLong_dd',
+            'X26.7_GR_MidRangeLong_dd',
+            'X27.2_HuPopDen_Mean_n.km2',
+            'X27.4_HuPopDen_Change',
+            'X28.1_Precip_Mean_mm',
+            'X28.2_Temp_Mean_01degC',
+            'X30.1_AET_Mean_mm',
+            'Diet.Inv',
+            'Diet.Fruit',
+            'Diet.Nect',
+            'Activity.Crepuscular',
+            'ForStrat.Value_A',
+            'ForStrat.Value_Ar',
+            'ForStrat.Value_G',
+            'ForStrat.Value_S')
 
 brtcite <- c(brtvar,'cites')
 
@@ -174,14 +186,14 @@ batdf %>%
 batdf %>% 
   as_tibble() %>%
   filter(!(betacov == 1)) %>%
-  select(host_species, pred1a) %>%
-  arrange(-pred1a) %>% View()
+  dplyr::select(host_species, pred1a) %>%
+  arrange(-pred1a)# %>% View()
 
 # Get a 90% omission threshold
 
 batdf %>% 
   as_tibble() %>%
-  select(host_species, betacov, pred1a) %>%
+  dplyr::select(host_species, betacov, pred1a) %>%
   data.frame() -> training
 
 library(PresenceAbsence)
@@ -197,7 +209,7 @@ thresh <- optimal.thresholds(data.frame(training),
 batdf %>% 
   as_tibble() %>%
   filter(!(betacov == 1)) %>%
-  select(host_species, pred1a) %>%
+  dplyr::select(host_species, pred1a) %>%
   arrange(-pred1a) %>% 
   filter(pred1a > thresh) -> not.df
 nrow(not.df)
@@ -208,7 +220,7 @@ auc.roc.plot(data.frame(training))
 
 # File export
 
-batdf %>% select(host_species,
+batdf %>% dplyr::select(host_species,
                  betacov,
                  pred1a) %>% 
   rename(pred = pred1a) %>% as_tibble() %>% 
@@ -244,14 +256,14 @@ batdf %>%
 batdf %>% 
   as_tibble() %>%
   filter(!(betacov == 1)) %>%
-  select(host_species, pred1b) %>%
+  dplyr::select(host_species, pred1b) %>%
   arrange(-pred1b) %>% View()
 
 # Get a 90% omission threshold
 
 batdf %>% 
   as_tibble() %>%
-  select(host_species, betacov, pred1b) %>%
+  dplyr::select(host_species, betacov, pred1b) %>%
   data.frame() -> training
 
 library(PresenceAbsence)
@@ -267,7 +279,7 @@ thresh <- optimal.thresholds(data.frame(training),
 batdf %>% 
   as_tibble() %>%
   filter(!(betacov == 1)) %>%
-  select(host_species, pred1b) %>%
+  dplyr::select(host_species, pred1b) %>%
   arrange(-pred1b) %>% 
   filter(pred1b > thresh) -> not.df
 nrow(not.df)
@@ -278,7 +290,7 @@ auc.roc.plot(data.frame(training))
 
 # File export
 
-batdf %>% select(host_species,
+batdf %>% dplyr::select(host_species,
                  betacov,
                  pred1b) %>% 
   rename(pred = pred1b) %>% as_tibble() %>% 
@@ -289,11 +301,11 @@ batdf %>% select(host_species,
 batdf <- batdf.master
 
 model2a <- pbart(x.train = batdf[,brtvar], #varkeep
-                y.train = batdf[,'betacov'],
-                sparse = TRUE,
-                a = 0.75,
-                ntree = 200L,
-                ndpost = 10000L)
+                 y.train = batdf[,'betacov'],
+                 sparse = TRUE,
+                 a = 0.75,
+                 ntree = 200L,
+                 ndpost = 10000L)
 
 varimp.pbart(model2a)
 
@@ -307,20 +319,20 @@ batdf %>%
              colour = factor(betacov))) + 
   geom_density(alpha = 0.1) + 
   theme_classic()
- 
+
 # Top rankings 
 
 batdf %>% 
   as_tibble() %>%
   filter(!(betacov == 1)) %>%
-  select(host_species, pred2a) %>%
+  dplyr::select(host_species, pred2a) %>%
   arrange(-pred2a) %>% View()
 
 # Get a 90% omission threshold
 
 batdf %>% 
   as_tibble() %>%
-  select(host_species, betacov, pred2a) %>%
+  dplyr::select(host_species, betacov, pred2a) %>%
   data.frame() -> training
 
 library(PresenceAbsence)
@@ -336,7 +348,7 @@ thresh <- optimal.thresholds(data.frame(training),
 batdf %>% 
   as_tibble() %>%
   filter(!(betacov == 1)) %>%
-  select(host_species, pred2a) %>%
+  dplyr::select(host_species, pred2a) %>%
   arrange(-pred2a) %>% 
   filter(pred2a > thresh) -> not.df
 nrow(not.df)
@@ -347,7 +359,7 @@ auc.roc.plot(data.frame(training))
 
 # File export
 
-batdf %>% select(host_species,
+batdf %>% dplyr::select(host_species,
                  betacov,
                  pred2a) %>% 
   rename(pred = pred2a) %>% as_tibble() %>% 
@@ -383,14 +395,14 @@ batdf %>%
 batdf %>% 
   as_tibble() %>%
   filter(!(betacov == 1)) %>%
-  select(host_species, pred2b) %>%
+  dplyr::select(host_species, pred2b) %>%
   arrange(-pred2b) %>% View()
 
 # Get a 90% omission threshold
 
 batdf %>% 
   as_tibble() %>%
-  select(host_species, betacov, pred2b) %>%
+  dplyr::select(host_species, betacov, pred2b) %>%
   data.frame() -> training
 
 library(PresenceAbsence)
@@ -406,9 +418,10 @@ thresh <- optimal.thresholds(data.frame(training),
 batdf %>% 
   as_tibble() %>%
   filter(!(betacov == 1)) %>%
-  select(host_species, pred2b) %>%
+  dplyr::select(host_species, pred2b) %>%
   arrange(-pred2b) %>% 
   filter(pred2b > thresh) -> not.df
+
 nrow(not.df)
 
 # How's the AUC look
@@ -417,7 +430,7 @@ auc.roc.plot(data.frame(training))
 
 # File export
 
-batdf %>% select(host_species,
+batdf %>% dplyr::select(host_species,
                  betacov,
                  pred2b) %>% 
   rename(pred = pred2b) %>% as_tibble() %>% 
