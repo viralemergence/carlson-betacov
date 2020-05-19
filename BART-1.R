@@ -8,6 +8,10 @@ set.seed(05082020)
 library(BART)
 library(fastDummies)
 library(tidyverse)
+library(tidyverse)
+library(dplyr)
+detach(package:plyr)
+library(PresenceAbsence)
 
 varimp.pbart <- function(model, plot=TRUE) {
   
@@ -56,10 +60,12 @@ varimp.pbart <- function(model, plot=TRUE) {
 }
 
 read_csv(paste0(here::here(), 
-                '/GitHub/Repos/virionette/03_interaction_data/virionette.csv')) %>% 
-  filter(host_order == 'Chiroptera') -> 
+                '/GitHub/Repos/virionette/03_interaction_data/virionette.csv'))-> 
   
   batcov
+
+batcov %>% 
+  dplyr::filter(host_order == 'Chiroptera')
 
 read_csv(paste0(here::here(), '/GitHub/Repos/virionette/04_predictors/Han-BatTraits.csv')) -> 
   
@@ -86,7 +92,8 @@ right_join(batcov, traits) %>%
 
 # Turn categorical variable into columns
 
-batdf %>% dummy_cols('ForStrat.Value') %>% 
+batdf %>% 
+  dummy_cols('ForStrat.Value') %>% 
   dplyr::select(-ForStrat.Value) -> batdf
 
 # Remove Sarah's drops 
@@ -196,8 +203,6 @@ batdf %>%
   dplyr::select(host_species, betacov, pred1a) %>%
   data.frame() -> training
 
-library(PresenceAbsence)
-
 thresh <- optimal.thresholds(data.frame(training),
                              threshold = 10001,
                              opt.methods = 10,
@@ -212,6 +217,7 @@ batdf %>%
   dplyr::select(host_species, pred1a) %>%
   arrange(-pred1a) %>% 
   filter(pred1a > thresh) -> not.df
+
 nrow(not.df)
 
 # How's the AUC look
@@ -278,10 +284,11 @@ thresh <- optimal.thresholds(data.frame(training),
 
 batdf %>% 
   as_tibble() %>%
-  filter(!(betacov == 1)) %>%
+  filter(!betacov) %>%
   dplyr::select(host_species, pred1b) %>%
   arrange(-pred1b) %>% 
   filter(pred1b > thresh) -> not.df
+
 nrow(not.df)
 
 # How's the AUC look
@@ -335,8 +342,6 @@ batdf %>%
   dplyr::select(host_species, betacov, pred2a) %>%
   data.frame() -> training
 
-library(PresenceAbsence)
-
 thresh <- optimal.thresholds(data.frame(training),
                              threshold = 10001,
                              opt.methods = 10,
@@ -351,6 +356,7 @@ batdf %>%
   dplyr::select(host_species, pred2a) %>%
   arrange(-pred2a) %>% 
   filter(pred2a > thresh) -> not.df
+
 nrow(not.df)
 
 # How's the AUC look
@@ -404,8 +410,6 @@ batdf %>%
   as_tibble() %>%
   dplyr::select(host_species, betacov, pred2b) %>%
   data.frame() -> training
-
-library(PresenceAbsence)
 
 thresh <- optimal.thresholds(data.frame(training),
                              threshold = 10001,
