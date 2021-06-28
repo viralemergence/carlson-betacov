@@ -321,48 +321,48 @@ batdf$pred2a <- colMeans(pnorm(model2a$yhat.train))
 
 # A density plot in the style of Becker
 
-batdf %>% 
-  ggplot(aes(pred2a, 
-             fill = factor(betacov), 
-             colour = factor(betacov))) + 
-  geom_density(alpha = 0.1) + 
-  theme_classic()
-
-# Top rankings 
-
-batdf %>% 
-  as_tibble() %>%
-  filter(!(betacov == 1)) %>%
-  dplyr::select(host_species, pred2a) %>%
-  arrange(-pred2a) %>% View()
-
-# Get a 90% omission threshold
-
-batdf %>% 
-  as_tibble() %>%
-  dplyr::select(host_species, betacov, pred2a) %>%
-  data.frame() -> training
-
-thresh <- optimal.thresholds(data.frame(training),
-                             threshold = 10001,
-                             opt.methods = 10,
-                             req.sens = 0.9,
-                             na.rm = TRUE)[1,2]
+# batdf %>% 
+#   ggplot(aes(pred2a, 
+#              fill = factor(betacov), 
+#              colour = factor(betacov))) + 
+#   geom_density(alpha = 0.1) + 
+#   theme_classic()
+# 
+# # Top rankings 
+# 
+# batdf %>% 
+#   as_tibble() %>%
+#   filter(!(betacov == 1)) %>%
+#   dplyr::select(host_species, pred2a) %>%
+#   arrange(-pred2a) %>% View()
+# 
+# # Get a 90% omission threshold
+# 
+# batdf %>% 
+#   as_tibble() %>%
+#   dplyr::select(host_species, betacov, pred2a) %>%
+#   data.frame() -> training
+# 
+# thresh <- optimal.thresholds(data.frame(training),
+#                              threshold = 10001,
+#                              opt.methods = 10,
+#                              req.sens = 0.9,
+#                              na.rm = TRUE)[1,2]
 
 # How many new bats are above the threshold?
 
-batdf %>% 
-  as_tibble() %>%
-  filter(!(betacov == 1)) %>%
-  dplyr::select(host_species, pred2a) %>%
-  arrange(-pred2a) %>% 
-  filter(pred2a > thresh) -> not.df
-
-nrow(not.df)
+# batdf %>% 
+#   as_tibble() %>%
+#   filter(!(betacov == 1)) %>%
+#   dplyr::select(host_species, pred2a) %>%
+#   arrange(-pred2a) %>% 
+#   filter(pred2a > thresh) -> not.df
+# 
+# nrow(not.df)
 
 # How's the AUC look
 
-auc.roc.plot(data.frame(training))
+# auc.roc.plot(data.frame(training))
 
 # File export
 
@@ -390,48 +390,48 @@ batdf$pred2b <- pnorm(colMeans(predict(model2b, batdf[,colnames(model2b$varcount
 
 # A density plot in the style of Becker
 
-batdf %>% 
-  ggplot(aes(pred2b, 
-             fill = factor(betacov), 
-             colour = factor(betacov))) + 
-  geom_density(alpha = 0.1) + 
-  theme_classic()
-
-# Top rankings 
-
-batdf %>% 
-  as_tibble() %>%
-  filter(!(betacov == 1)) %>%
-  dplyr::select(host_species, pred2b) %>%
-  arrange(-pred2b) %>% View()
-
-# Get a 90% omission threshold
-
-batdf %>% 
-  as_tibble() %>%
-  dplyr::select(host_species, betacov, pred2b) %>%
-  data.frame() -> training
-
-thresh <- optimal.thresholds(data.frame(training),
-                             threshold = 10001,
-                             opt.methods = 10,
-                             req.sens = 0.9,
-                             na.rm = TRUE)[1,2]
+# batdf %>% 
+#   ggplot(aes(pred2b, 
+#              fill = factor(betacov), 
+#              colour = factor(betacov))) + 
+#   geom_density(alpha = 0.1) + 
+#   theme_classic()
+# 
+# # Top rankings 
+# 
+# batdf %>% 
+#   as_tibble() %>%
+#   filter(!(betacov == 1)) %>%
+#   dplyr::select(host_species, pred2b) %>%
+#   arrange(-pred2b) %>% View()
+# 
+# # Get a 90% omission threshold
+# 
+# batdf %>% 
+#   as_tibble() %>%
+#   dplyr::select(host_species, betacov, pred2b) %>%
+#   data.frame() -> training
+# 
+# thresh <- optimal.thresholds(data.frame(training),
+#                              threshold = 10001,
+#                              opt.methods = 10,
+#                              req.sens = 0.9,
+#                              na.rm = TRUE)[1,2]
 
 # How many new bats are above the threshold?
 
-batdf %>% 
-  as_tibble() %>%
-  filter(!(betacov == 1)) %>%
-  dplyr::select(host_species, pred2b) %>%
-  arrange(-pred2b) %>% 
-  filter(pred2b > thresh) -> not.df
+# batdf %>% 
+#   as_tibble() %>%
+#   filter(!(betacov == 1)) %>%
+#   dplyr::select(host_species, pred2b) %>%
+#   arrange(-pred2b) %>% 
+#   filter(pred2b > thresh) -> not.df
 
-nrow(not.df)
+# nrow(not.df)
 
 # How's the AUC look
 
-auc.roc.plot(data.frame(training))
+# auc.roc.plot(data.frame(training))
 
 # File export
 
