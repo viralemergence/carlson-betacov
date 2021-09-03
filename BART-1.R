@@ -12,6 +12,8 @@ library(tidyverse)
 library(dplyr)
 library(plyr)
 detach(package:plyr)
+detach(package:dplyr)
+library(dplyr)
 library(PresenceAbsence)
 
 varimp.pbart <- function(model, plot=TRUE) {
@@ -68,7 +70,7 @@ read_csv(paste0(here::here(),
 batcov %>% 
   dplyr::filter(host_order == 'Chiroptera')
 
-read_csv(paste0(here::here(), '/GitHub/Repos/virionette/04_predictors/Han-BatTraits.csv')) -> 
+read.csv(paste0(here::here(), '/GitHub/Repos/virionette/04_predictors/Han-BatTraits.csv')) -> 
   
   traits
 
@@ -79,7 +81,7 @@ batcov %>% mutate(betacov = as.numeric(virus_genus == 'Betacoronavirus')) ->
   batcov
 
 batcov %>% dplyr::select(host_species, betacov) %>% unique -> batcov
-batcov %>% group_by(host_species) %>% summarize(betacov = max(betacov)) -> batcov
+batcov %>% group_by(host_species) %>% dplyr::summarize(betacov = max(betacov)) -> batcov
 
 # Create binomial names in the trait data
 
@@ -228,8 +230,8 @@ auc.roc.plot(data.frame(training))
 # File export
 
 batdf %>% dplyr::select(host_species,
-                 betacov,
-                 pred1a) %>% 
+                        betacov,
+                        pred1a) %>% 
   rename(pred = pred1a) %>% as_tibble() %>% 
   write.csv('CarlsonBartUncorrected.csv')
 
@@ -299,8 +301,8 @@ auc.roc.plot(data.frame(training))
 # File export
 
 batdf %>% dplyr::select(host_species,
-                 betacov,
-                 pred1b) %>% 
+                        betacov,
+                        pred1b) %>% 
   rename(pred = pred1b) %>% as_tibble() %>% 
   write.csv('CarlsonBartCitations.csv')
 
@@ -367,8 +369,8 @@ batdf$pred2a <- colMeans(pnorm(model2a$yhat.train))
 # File export
 
 batdf %>% dplyr::select(host_species,
-                 betacov,
-                 pred2a) %>% 
+                        betacov,
+                        pred2a) %>% 
   rename(pred = pred2a) %>% as_tibble() %>% 
   write.csv('CarlsonDartUncorrected.csv')
 
@@ -436,8 +438,8 @@ batdf$pred2b <- pnorm(colMeans(predict(model2b, batdf[,colnames(model2b$varcount
 # File export
 
 batdf %>% dplyr::select(host_species,
-                 betacov,
-                 pred2b) %>% 
+                        betacov,
+                        pred2b) %>% 
   rename(pred = pred2b) %>% as_tibble() %>% 
   write.csv('CarlsonDartCitations.csv')
 
